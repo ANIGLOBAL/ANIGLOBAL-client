@@ -16,7 +16,6 @@
  */
 
 export type CanonicalKind = 'anime' | 'manga' | 'character' | 'staff' | 'studio' | 'producer' | 'relation';
-
 const PREFIX: Record<CanonicalKind, string> = {
   anime: 'ag_anime_',
   manga: 'ag_manga_',

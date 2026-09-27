@@ -2,9 +2,9 @@
 
 Free API for developers. One public API, one query language.
 
-> **Status: v1, under construction.** Only the `AV` (Vietnamese) platform has
-> real data. `AE` and `AC` exist as interfaces only — see
-> [Not built yet](#not-built-yet) so you do not expect features that are missing.
+> **Status: v1, under construction.** Only the `ASIA` region has real data, and
+> within it only Vietnamese right now. See [Not built yet](#not-built-yet) so
+> you do not expect features that are missing.
 
 ---
 
@@ -29,20 +29,33 @@ ANIGLOBAL API                        (Phase 7)
 AGQL parser → validator → executor
    │
    ▼
-Platform Router
-   ├── AV   ANIVIET (Vietnamese)   ← only enabled platform in v1
-   ├── AE   ANIENG (English)       reserved
-   └── AC   Chinese                reserved
+Region Router
+   └── ASIA   (AniViet — Vietnamese)  ← only enabled region in v1
+   │             selected language via @locale ("vi-VN" | "en")
+   ▼
+asia-api  (aggregator worker)
    │
    ▼
-av-api  (aggregator worker)
-   │
-   ▼
-ANIVIET workers (content, auth, shop, watchparty, …)
+AniViet workers (content, auth, shop, watchparty, …)
 ```
 
 The public API never exposes AniList, MAL or MangaDex. They are implementation
-details behind the AV adapter.
+details behind the region adapter.
+
+---
+
+## Regions and locales
+
+**Region** is the top level. Languages live *inside* a region, chosen with
+`@locale` — so "Vietnamese" and "English" are not separate platforms.
+
+```aniglobalql
+AGQL -> ASIA @locale("vi-VN") { anime(search: "Frieren") { id title } }
+AGQL -> ASIA @locale("en")     { anime(search: "Frieren") { id title } }
+AGQL { anime { id } }   -- no region, defaults to ASIA in v1
+```
+
+Only `ASIA` is enabled. Other regions are interfaces only — no fake data.
 
 ---
 
@@ -51,7 +64,7 @@ details behind the AV adapter.
 AGQL is **not** GraphQL. It is ANIGLOBAL's own syntax.
 
 ```aniglobalql
-AGQL -> AV @locale("vi-VN") {
+AGQL -> ASIA @locale("vi-VN") {
   anime(search: "Frieren") @smart {
     id
     title
@@ -63,19 +76,20 @@ AGQL -> AV @locale("vi-VN") {
 }
 ```
 
-- `AGQL { … }` — no platform given, defaults to `AV` in v1
-- `AGQL -> AV { … }` — explicit platform routing
+- `AGQL { … }` — no region given, defaults to `ASIA` in v1
+- `AGQL -> ASIA { … }` — explicit region routing
 - `->` — relation traversal
 - Directives: `@smart`, `@merge`, `@fallback`, `@locale`
 
-Syntax implemented today: lexer, parser, AST — **15 tests**.
-Not implemented yet: validator, executor, directives.
+Implemented: lexer, parser, AST — 14 tests.
+Not yet: validator, executor, directives.
 
 ---
 
 ## Canonical IDs
 
-Public data uses ANIGLOBAL's own IDs. Source IDs (slugs, AniList IDs) stay internal.
+Public data uses ANIGLOBAL's own IDs. Source IDs (slugs, AniList IDs) stay
+internal.
 
 ```text
 ag_anime_1
@@ -84,8 +98,10 @@ ag_character_1
 ag_staff_1
 ```
 
-`av-api` maintains the mapping in its own D1 database (`id_map` table). IDs are
-sequential, never reused, and stable for a given source ID.
+`asia-api` keeps the mapping in its own D1 database (`aniglobal-asia`,
+`id_map` table). IDs are sequential, never reused, and stable per source ID.
+Without a D1 binding the worker still runs but IDs come from a hash and change
+on every deploy — `/health` reports this as `idMappingPersistent: false`.
 
 ---
 
@@ -95,17 +111,14 @@ sequential, never reused, and stable for a given source ID.
 src/
 ├── agql/           lexer, parser, ast, validator*, executor*  (* todo)
 ├── api/            routes, auth, developer, errors
-├── platforms/      av, ae, ac  (PlatformProvider)
-├── core/           models, ids
+├── platforms/      region providers (av → asia, others reserved)
+├── core/           models, region, ids
 ├── clients/        registration, authentication, permissions, rate-limit
 ├── cache/
 └── utils/
 
 workers/
-└── av-api/         aggregator worker: AV data -> ANIGLOBAL canonical model
-
-tools/
-└── build-av-api.mjs   bundle thành 1 file để deploy Dashboard
+└── asia-api/       asia-api.js = the deploy file (plain JS, no build step)
 
 test/
 ```
@@ -116,30 +129,47 @@ test/
 
 ```bash
 npm install
-
-npm run typecheck        # src + workers (strict) rồi cả test
-npm test                 # 34 tests
-node tools/build-av-api.mjs
+npm run typecheck   # src + workers (strict), then tests
+npm test            # 33 tests
 ```
 
-`npm run typecheck:src` chỉ kiểm tra mã nguồn, không kiểm tra test.
+There is **no build step and no wrangler**. `workers/asia-api/asia-api.js` is
+plain JavaScript with no imports, so it can be pasted into the Dashboard as-is,
+and the tests import that exact same file.
 
 ---
 
-## Deploy av-api
+## Deploy asia-api
 
-1. Tạo D1 database `aniglobal-av`, copy `database_id` vào `workers/av-api/wrangler.toml`
-2. `node tools/build-av-api.mjs` → sinh `workers/av-api/av-api.js`
-3. Cloudflare Dashboard → Worker `av-api` → Edit code → paste file → Deploy
-4. Gán binding `DB` trỏ tới `aniglobal-av`
+Deployed **manually** — the repo does not use wrangler.
 
-Kiểm tra: `GET /health` phải trả `service: "av-api"`, `platform: "AV"`.
+1. Dashboard → Workers & Pages → `asia-api` → Edit code
+2. Paste the whole of `workers/asia-api/asia-api.js`
+3. Deploy
+4. Settings → Bindings:
+
+| Binding | Type | Resource |
+|---|---|---|
+| `DB` | D1 Database | `aniglobal-av`… → `aniglobal-asia` — `4b84f285-03fc-4af2-a937-f035fff24a38` |
+
+5. No environment variables needed.
+
+Details in `workers/asia-api/BINDINGS.md`.
+
+Verify:
+
+```
+GET https://asia-api.aniviet.workers.dev/health
+```
+
+`d1: true` and `idMappingPersistent: true` are required — if `d1` is `false`,
+canonical IDs are temporary and will change on every deploy.
 
 ---
 
 ## Build order
 
-The order matters — later phases depend on earlier ones.
+Later phases depend on earlier ones.
 
 | Phase | Nội dung | Trạng thái |
 |---|---|---|
@@ -147,11 +177,11 @@ The order matters — later phases depend on earlier ones.
 | 2 | AGQL lexer, parser, AST, validator, executor | 🟡 lexer/parser/AST xong |
 | 3 | App registration | ⬜ |
 | 4 | Authentication, scopes, rate limit | ⬜ |
-| 5 | AV provider | ⬜ |
+| 5 | ASIA provider | ⬜ |
 | 6 | `@smart` `@merge` `@fallback` `@locale` | ⬜ |
 | 7 | `POST /v1/agql` | ⬜ |
-| 8 | Developer Console | ⬜ |
-| 9 | Documentation | ⬜ |
+| 8 | Developer Console (`/ANIVIET` in Vietnamese) | ⬜ |
+| 9 | Documentation (`/docs` in English) | ⬜ |
 
 ---
 
@@ -160,11 +190,14 @@ The order matters — later phases depend on earlier ones.
 Ghi rõ để không ai tưởng đã có:
 
 - `POST /v1/agql` chưa tồn tại
-- Developer Console chưa có (trang tạo app, xem key, rotate, revoke)
-- Trang `/docs` chưa có
-- `character`, `staff`, `studio`, `producer` chưa nối vào `av-api`
-- Dữ liệu AV còn mỏng: khoảng 226 anime + 29 NSFW + 1.664 nhân vật + 334 staff.
-  Phần lớn chỉ có title/cover/status; description chỉ có 65 mục, genres rất ít
+- Developer Console chưa có: no create app, no key display, no rotate/revoke
+- `/docs` chưa có
+- `character`, `staff`, `studio`, `producer` chưa nối vào `asia-api`
+- Dữ liệu ASIA còn mỏng: ~226 anime SFW + 29 NSFW + 1.664 nhân vật + 334 staff.
+  Phần lớn anime/manga chỉ có title/cover/status; `description` chỉ có 65 mục,
+  `genres` rất ít, `external_ids` rỗng nên chưa tra được AniList ID
+- Developer accounts reuse AniViet auth — one login covers both. No separate
+  AniGlobal user system exists (there is nothing else to authenticate against yet)
 
 ---
 

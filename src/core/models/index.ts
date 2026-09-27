@@ -1,10 +1,8 @@
-/** Model nen tang cua ANIGLOBAL — dung chung cho ca 3 nen tang AV/AE/AC. */
+/** Model nen tang cua ANIGLOBAL — dung chung cho moi khu vuc. */
 
-import type { PlatformId } from './platform.ts';
+import type { RegionId } from './region.ts';
 
-export * from './platform.ts';
-
-/** AV = ANIVIET (Viet Nam) | AE = ANIENG (English) | AC = Chinese */
+export * from './region.ts';
 
 export interface TitleSet {
   romaji?: string | null;
@@ -16,7 +14,7 @@ export interface TitleSet {
 
 export interface Anime {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   type: 'anime' | 'movie' | 'ova' | 'special';
   title: TitleSet;
   description?: string | null;
@@ -32,14 +30,14 @@ export interface Anime {
   averageScore?: number | null;
   popularity?: number | null;
   synonyms: string[];
-  /** ID nen tang goc (chi doi voi noi bo, khong phai contract public) */
+  /** ID du lieu goc — chi noi bo, khong phai contract public */
   sourceId?: string | null;
   source?: string | null;
 }
 
 export interface Manga {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   title: TitleSet;
   description?: string | null;
   cover?: string | null;
@@ -59,7 +57,7 @@ export interface Manga {
 
 export interface Character {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   name: string;
   nameNative?: string | null;
   romajiName?: string | null;
@@ -80,7 +78,7 @@ export interface Character {
 
 export interface Staff {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   name: string;
   nameNative?: string | null;
   image?: string | null;
@@ -93,7 +91,7 @@ export interface Staff {
 
 export interface Studio {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   name: string;
   /** "anime" | "manga" | "both" */
   kind: string;
@@ -102,7 +100,7 @@ export interface Studio {
 
 export interface Producer {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   name: string;
   kind: string;
   sourceId?: string | null;
@@ -110,7 +108,7 @@ export interface Producer {
 
 export interface Relation {
   id: string;
-  platform: PlatformId;
+  region: RegionId;
   type: string;
   relatedId: string;
   relatedType: 'anime' | 'manga';
@@ -126,4 +124,18 @@ export interface Page<T> {
   page: number;
   limit: number;
   pages: number;
+}
+
+/**
+ * Interface chung cho mot khu vuc. Chi ASIA co implementation that trong v1.
+ * Cac khu vuc khuc ton tai o dang interface de san mo rong, khong duoc
+ * chua du lieu gia lap.
+ */
+export interface RegionProvider {
+  id: RegionId;
+  getAnime(id: string): Promise<Anime | null>;
+  getManga(id: string): Promise<Manga | null>;
+  getCharacter(id: string): Promise<Character | null>;
+  getStaff(id: string): Promise<Staff | null>;
+  search(query: string, limit: number): Promise<Page<Anime | Manga>>;
 }

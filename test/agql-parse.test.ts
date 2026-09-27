@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { tokenize, Tok } from '../src/agql/lexer/tokenizer.ts';
 import { parse, ParseError } from '../src/agql/parser/parser.ts';
 
-test('lexer: tach duoc AGQL -> AV', () => {
-  const t = tokenize('AGQL -> AV { id }');
-  assert.equal(t[0].type, Tok.Agql);
-  assert.equal(t[1].type, Tok.Arrow);
-  assert.equal(t[2].type, Tok.Ident);
-  assert.equal(t[2].value, 'AV');
-  assert.equal(t[3].type, Tok.LBrace);
+test('lexer: tach duoc AGQL -> ASIA', () => {
+  const t = tokenize('AGQL -> ASIA { id }');
+  assert.equal(t[0]!.type, Tok.Agql);
+  assert.equal(t[1]!.type, Tok.Arrow);
+  assert.equal(t[2]!.type, Tok.Ident);
+  assert.equal(t[2]!.value, 'ASIA');
+  assert.equal(t[3]!.type, Tok.LBrace);
 });
 
 test('lexer: -> la MOT token', () => {
@@ -36,7 +36,7 @@ test('lexer: comment chua dong -> nem loi', () => {
 
 test('parser: query don gian', () => {
   const d = parse('AGQL { anime(id: "ag_anime_1") { id title } }');
-  assert.equal(d.platform, null);
+  assert.equal(d.region, null);
   assert.equal(d.selection.selections.length, 1);
   const f = d.selection.selections[0]!;
   assert.equal(f.kind, 'field');
@@ -45,13 +45,12 @@ test('parser: query don gian', () => {
   assert.equal(f.args[0]!.value.kind, 'string');
 });
 
-test('parser: routing nen tang', () => {
-  assert.equal(parse('AGQL -> AV { id }').platform, 'AV');
-  assert.equal(parse('AGQL -> ae { id }').platform, 'AE');
-  assert.equal(parse('AGQL -> AC { id }').platform, 'AC');
+test('parser: routing khu vuc', () => {
+  assert.equal(parse('AGQL -> ASIA { id }').region, 'ASIA');
+  assert.equal(parse('AGQL -> asia { id }').region, 'ASIA');
 });
 
-test('parser: nen tang sai -> nem loi', () => {
+test('parser: khu vuc sai -> nem loi', () => {
   assert.throws(() => parse('AGQL -> XX { id }'), /khong hop le/);
 });
 
@@ -61,7 +60,7 @@ test('parser: khong bat dau bang AGQL -> nem loi', () => {
 
 test('parser: duyet quan he ->', () => {
   const d = parse(`
-    AGQL -> AV {
+    AGQL -> ASIA {
       anime(id: "ag_anime_1") {
         id
         title
@@ -88,7 +87,7 @@ test('parser: alias', () => {
 });
 
 test('parser: directive cap doc @locale', () => {
-  const d = parse('AGQL -> AV @locale("vi-VN") { anime { id } }');
+  const d = parse('AGQL -> ASIA @locale("vi-VN") { anime { id } }');
   assert.equal(d.directives[0]!.name, 'locale');
   const v = d.directives[0]!.args[0]!.value;
   assert.equal(v.kind, 'string');

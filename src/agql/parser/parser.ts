@@ -2,12 +2,12 @@
  * Parser AGQL.
  *
  *   AGQL { ... }
- *   AGQL -> AV { ... }
- *   AGQL -> AV @locale("vi-VN") { ... }
+ *   AGQL -> ASIA { ... }
+ *   AGQL -> ASIA @locale("vi-VN") { ... }
  */
 
 import { tokenize, Tok, type Token, LexError } from '../lexer/tokenizer.ts';
-import { isPlatformId, type PlatformId } from '../../core/models/platform.ts';
+import { isRegionId, type RegionId } from '../../core/models/region.ts';
 import type {
   ArgumentNode,
   ArgumentValue,
@@ -79,21 +79,21 @@ class Parser {
     }
     this.next();
 
-    // -> <PLATFORM>   (tuy chon, mac dinh AV)
-    let platform: PlatformId | null = null;
+    // -> <REGION>   (tuy chon, mac dinh ASIA)
+    let region: RegionId | null = null;
     if (this.at(Tok.Arrow)) {
       this.next();
-      const p = this.expect(Tok.Ident, 'ten nen tang sau "->"');
+      const p = this.expect(Tok.Ident, 'ten khu vuc sau "->"');
       const upper = p.value.toUpperCase();
-      if (!isPlatformId(upper)) {
+      if (!isRegionId(upper)) {
         throw new ParseError(
-          `Nen tang "${p.value}" khong hop le. Hop le: AV, AE, AC`,
+          `Khu vuc "${p.value}" khong hop le. Hop le: ASIA`,
           p.line,
           p.column,
           p.start
         );
       }
-      platform = upper;
+      region = upper;
     }
 
     // directive cap doc   @locale("vi-VN")
@@ -111,7 +111,7 @@ class Parser {
       );
     }
 
-    return { platform, directives, selection };
+    return { region, directives, selection };
   }
 
   private parseDirectives(): DirectiveNode[] {

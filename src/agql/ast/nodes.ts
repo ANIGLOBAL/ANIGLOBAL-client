@@ -25,7 +25,7 @@
  *     selection?
  */
 
-import type { PlatformId } from '../../core/models/platform.ts';
+import type { RegionId } from '../../core/models/region.ts';
 
 export type ArgumentValue =
   | { kind: 'string'; value: string }
@@ -81,7 +81,7 @@ export interface SelectionSetNode {
 }
 
 export interface DocumentNode {
-  platform: PlatformId | null;
+  region: RegionId | null;
   directives: DirectiveNode[];
   selection: SelectionSetNode;
 }
