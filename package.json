@@ -1,0 +1,22 @@
+{
+  "name": "aniglobal-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ANIGLOBAL API — unified anime/manga metadata API powered by ANIGLOBALQL (AGQL)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "typecheck:src": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "bundle": "node tools/bundle.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260926.1",
+    "@types/node": "^26.6.3",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.142.0"
+  }
+}
