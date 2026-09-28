@@ -1,6 +1,6 @@
-node_modules/
+﻿# File tam thoi dung de viet commit message
+.commit-msg.txt
+
+# Build
 dist/
-.bundle-tmp/
-*.log
-.wrangler/
-.dev.vars
+node_modules/
