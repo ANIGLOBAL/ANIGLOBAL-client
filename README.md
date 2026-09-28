@@ -1,6 +1,10 @@
-# ANIGLOBAL API
+# ANIGLOBAL-client
 
-Free API for developers. One public API, one query language.
+Developer portal for ANIGLOBAL — the free API. One public API, one query language.
+
+> The parent brand site lives in the separate `ANIGLOBAL` repository. This repository
+> holds the developer-facing half: the AGQL implementation, the region adapter worker
+> and the developer console.
 
 > **Status: v1, under construction.** Only the `ASIA` region has real data, and
 > within it only Vietnamese right now. See [Not built yet](#not-built-yet) so
