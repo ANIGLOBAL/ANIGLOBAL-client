@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API docs — ANIGLOBAL developer</title>
+<meta name="description" content="Full ANIGLOBAL API reference: base URL, authentication, AGQL grammar, directives, resources, response format, rate limits and error codes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="parent-bar">
+  <div class="wrap">
+    <a href="https://aniglobal.github.io/ANIGLOBAL/">ANIGLOBAL</a>
+    <span class="sep">/</span>
+    <a href="index.html">Developer portal</a>
+    <span class="sep">/</span>
+    <span>Docs</span>
+  </div>
+</div>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> ANIGLOBAL <span style="font-weight:600;color:var(--muted);font-size:13px">dev</span></a>
+    <nav class="site">
+      <a href="index.html">Home</a>
+      <a href="ANIVIET.html">Create app</a>
+      <a href="docs.html" aria-current="page">Docs</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">API reference</span>
+    <h1>ANIGLOBAL API</h1>
+    <p class="lead">
+      One endpoint, one query language, one credential pair. This is the full
+      reference — base URL, authentication, AGQL grammar, resources, response
+      format, rate limits and error codes.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="ANIVIET.html">Create an app</a>
+      <a class="btn btn-ghost" href="index.html">Portal home</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="notice">
+      <strong>Under development.</strong> <code>POST /v1/agql</code> is not open yet.
+      This documents the intended contract so you can build against it now, and so
+      the implementation has something concrete to satisfy.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Base URL</h2>
+    <pre><code>https://api.aniglobal.com/v1</code></pre>
+    <p class="section-sub">Region data is served from an edge adapter. The ASIA region currently answers from the ANIVIET dataset.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/v1/agql</code></td><td>POST</td><td>Run an AGQL query.</td></tr>
+          <tr><td><code>/v1/health</code></td><td>GET</td><td>Region availability. No credentials required.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Authentication</h2>
+    <p class="section-sub">Every request must identify which registered app is calling.</p>
+<pre><code><span class="k">POST</span> https://api.aniglobal.com/v1/agql
+<span class="k">Authorization</span>: Bearer &lt;app-client-key&gt;
+<span class="k">X-ANIGLOBAL-Client-ID</span>: &lt;app-client-id&gt;
+<span class="k">Content-Type</span>: application/json
+
+{ "query": "AGQL -&gt; ASIA @locale(\"vi-VN\") { anime(search: \"Frieren\") { id title } }" }</code></pre>
+    <div class="notice">
+      <strong>Server-side only.</strong> Never ship the client key in a frontend bundle,
+      and never pass it in a URL. Query strings leak into server logs, browser history
+      and analytics tools.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>AGQL</h2>
+    <p class="section-sub">
+      ANIGLOBALQL is ANIGLOBAL's own query syntax. It is not GraphQL, even though the
+      shape looks familiar.
+    </p>
+
+    <h3 style="margin-top:24px">Header</h3>
+<pre><code><span class="k">AGQL</span> -&gt; <span class="k">ASIA</span> @locale(<span class="s">"vi-VN"</span>) { ... }</code></pre>
+    <p>Region is named with <code>-&gt;</code>, then optional directives. In v1 the region defaults to <code>ASIA</code>.</p>
+
+    <h3 style="margin-top:24px">Language</h3>
+    <p>Locale is a directive, not a separate platform. The same entity is available in <code>vi-VN</code> or <code>en</code>:</p>
+<pre><code>AGQL -&gt; ASIA @locale(<span class="s">"en"</span>) { anime(id: <span class="s">"ag_anime_1"</span>) { title } }</code></pre>
+
+    <h3 style="margin-top:24px">Root fields</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Root</th><th>Arguments</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td><code>anime</code></td><td><code>id</code>, <code>search</code></td><td>One anime.</td></tr>
+          <tr><td><code>manga</code></td><td><code>id</code>, <code>search</code></td><td>One manga.</td></tr>
+          <tr><td><code>character</code></td><td><code>id</code>, <code>search</code></td><td>One character.</td></tr>
+          <tr><td><code>staff</code></td><td><code>id</code>, <code>search</code></td><td>One staff member.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:24px">Relation traversal</h3>
+    <p><code>-&gt;</code> follows a relation. It is part of the language, not an implementation detail:</p>
+<pre><code>AGQL -&gt; ASIA @locale(<span class="s">"vi-VN"</span>) {
+  anime(search: <span class="s">"Frieren"</span>) {
+    id title cover
+    -&gt; characters @merge   { id name image }
+    -&gt; staff      @fallback { id name role }
+    -&gt; studio                { id name }
+  }
+}</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Directives</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Directive</th><th>Where</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>@locale("vi-VN")</code></td><td>Query header</td><td>Language for localised fields.</td></tr>
+          <tr><td><code>@smart</code></td><td>Root field</td><td>Let ANIGLOBAL pick the best available source per field.</td></tr>
+          <tr><td><code>@merge</code></td><td>Relation</td><td>Merge records from several sources into one.</td></tr>
+          <tr><td><code>@fallback</code></td><td>Relation</td><td>Use only when no better source has it.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Canonical IDs</h2>
+    <p class="section-sub">
+      Public records use ANIGLOBAL IDs. Slugs and upstream provider IDs are never
+      exposed, so they can change without breaking your app.
+    </p>
+<pre><code>ag_anime_1
+ag_manga_1
+ag_character_1
+ag_staff_1</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Response format</h2>
+<pre><code>{
+  <span class="s">"data"</span>: {
+    <span class="s">"anime"</span>: {
+      <span class="s">"id"</span>: <span class="s">"ag_anime_1"</span>,
+      <span class="s">"title"</span>: <span class="s">"Frieren: Beyond Journey's End"</span>,
+      <span class="s">"characters"</span>: [
+        { <span class="s">"id"</span>: <span class="s">"ag_character_1"</span>, <span class="s">"name"</span>: <span class="s">"Frieren"</span> }
+      ]
+    }
+  }
+}</code></pre>
+    <p>Relations come back as arrays even when a single record is expected, so a
+    missing relation is an empty array rather than a missing key.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Errors</h2>
+    <p class="section-sub">Errors use a stable code so your app can branch on them.</p>
+<pre><code>{
+  <span class="s">"error"</span>: {
+    <span class="s">"code"</span>: <span class="s">"INVALID_CLIENT_KEY"</span>,
+    <span class="s">"message"</span>: <span class="s">"The provided App Client credentials are invalid."</span>
+  }
+}</code></pre>
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>AGQL_PARSE_ERROR</code></td><td>The query could not be parsed.</td></tr>
+          <tr><td><code>AGQL_VALIDATION_ERROR</code></td><td>Parsed, but not a valid query.</td></tr>
+          <tr><td><code>RESOURCE_NOT_FOUND</code></td><td>No record with that canonical ID.</td></tr>
+          <tr><td><code>PLATFORM_NOT_AVAILABLE</code></td><td>That region has no dataset yet.</td></tr>
+          <tr><td><code>CLIENT_ID_REQUIRED</code></td><td>Missing the client ID header.</td></tr>
+          <tr><td><code>INVALID_CLIENT_ID</code></td><td>No such registered app.</td></tr>
+          <tr><td><code>INVALID_CLIENT_KEY</code></td><td>The secret did not match.</td></tr>
+          <tr><td><code>CLIENT_REVOKED</code></td><td>The app was revoked.</td></tr>
+          <tr><td><code>INSUFFICIENT_SCOPE</code></td><td>The app lacks the required permission.</td></tr>
+          <tr><td><code>RATE_LIMITED</code></td><td>Too many requests for this app client.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Rate limits</h2>
+    <p class="section-sub">Counted per app client, not per IP.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Header</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>X-RateLimit-Limit</code></td><td>Requests allowed in the window.</td></tr>
+          <tr><td><code>X-RateLimit-Remaining</code></td><td>Requests left in the window.</td></tr>
+          <tr><td><code>X-RateLimit-Reset</code></td><td>Unix time the window resets.</td></tr>
+          <tr><td><code>Retry-After</code></td><td>Seconds to wait, on a <code>429</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px">Back off on <code>429</code> using <code>Retry-After</code>. Do not retry in a tight loop.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Example</h2>
+<pre><code>curl -X POST https://api.aniglobal.com/v1/agql \
+  -H <span class="s">"Authorization: Bearer $ANIGLOBAL_CLIENT_KEY"</span> \
+  -H <span class="s">"X-ANIGLOBAL-Client-ID: $ANIGLOBAL_CLIENT_ID"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"query":"AGQL -&gt; ASIA @locale(\"vi-VN\") { anime(search: \"Frieren\") @smart { id title } }"}'</span></code></pre>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© ANIGLOBAL</span>
+    <nav>
+      <a href="https://aniglobal.github.io/ANIGLOBAL/">Brand site</a>
+      <a href="index.html">Portal home</a>
+      <a href="ANIVIET.html">Create an app</a>
+    </nav>
+  </div>
+</footer>
+
+</body>
+</html>

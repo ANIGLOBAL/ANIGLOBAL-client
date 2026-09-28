@@ -1,0 +1,525 @@
+/* ============================================================
+   ANIGLOBAL — style chung
+   Bang mau lay tu he thong ANIVIET de moi trang co cung cam
+   trien khi cac trang ANI<region>.
+   ============================================================ */
+
+:root {
+  --accent: #ff5e00;
+  --accent-soft: rgba(255, 94, 0, 0.12);
+  --bg: #151515;
+  --bg-2: #101010;
+  --card: #1b1b1b;
+  --card-2: #202020;
+  --border: #2a2a2a;
+  --border-2: #363636;
+  --muted: #8c8c8c;
+  --text: #f2f2f2;
+  --text-dim: #b9b9b9;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --radius: 14px;
+  --max: 1080px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------- layout ---------------- */
+
+.wrap {
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+
+main {
+  padding-bottom: 80px;
+}
+
+/* ---------------- header ---------------- */
+
+header.site {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(21, 21, 21, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+header.site .wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 62px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.brand:hover {
+  text-decoration: none;
+}
+
+.brand .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+
+nav.site {
+  margin-left: auto;
+  display: flex;
+  gap: 22px;
+  font-size: 14px;
+}
+
+nav.site a {
+  color: var(--text-dim);
+}
+
+nav.site a:hover,
+nav.site a[aria-current='page'] {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* ---------------- hero ---------------- */
+
+.hero {
+  padding: 84px 0 60px;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(900px 340px at 18% -10%, rgba(255, 94, 0, 0.16), transparent 70%),
+    radial-gradient(700px 300px at 92% 0%, rgba(255, 94, 0, 0.07), transparent 70%);
+}
+
+.hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(34px, 5.4vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+.hero h1 .accent {
+  color: var(--accent);
+}
+
+.hero p.lead {
+  margin: 0 0 28px;
+  max-width: 62ch;
+  font-size: clamp(15px, 1.7vw, 18px);
+  color: var(--text-dim);
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------------- buttons ---------------- */
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover {
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-ghost {
+  background: var(--card);
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------- sections ---------------- */
+
+section {
+  padding: 56px 0;
+}
+
+section + section {
+  border-top: 1px solid var(--border);
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.section-sub {
+  margin: 0 0 28px;
+  max-width: 62ch;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+/* ---------------- grid + cards ---------------- */
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid.cols-3 {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.card {
+  display: block;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+a.card:hover {
+  text-decoration: none;
+  border-color: var(--accent);
+  background: var(--card-2);
+  transform: translateY(-2px);
+}
+
+.card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.card .meta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------------- badges ---------------- */
+
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--bg-2);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.badge.live {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--green);
+}
+
+.badge.soon {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.09);
+  color: var(--yellow);
+}
+
+/* ---------------- code ---------------- */
+
+pre {
+  margin: 0 0 14px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #d8d8d8;
+}
+
+pre .c {
+  color: #6a6a6a;
+}
+
+pre .k {
+  color: #ff9c5c;
+}
+
+pre .s {
+  color: #a8d8a8;
+}
+
+code {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  color: #ffb98a;
+}
+
+pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* ---------------- steps ---------------- */
+
+.steps {
+  counter-reset: step;
+  display: grid;
+  gap: 14px;
+}
+
+.step {
+  position: relative;
+  padding: 18px 20px 18px 58px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  border: 1px solid rgba(255, 94, 0, 0.4);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step h3 {
+  margin-bottom: 4px;
+}
+
+.step p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+/* ---------------- table ---------------- */
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 520px;
+}
+
+th,
+td {
+  padding: 11px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--bg-2);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+td code {
+  white-space: nowrap;
+}
+
+/* ---------------- notice ---------------- */
+
+.notice {
+  padding: 15px 18px;
+  border: 1px solid rgba(255, 94, 0, 0.32);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.notice strong {
+  color: var(--text);
+}
+
+/* ---------------- footer ---------------- */
+
+footer.site {
+  border-top: 1px solid var(--border);
+  padding: 30px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+footer.site .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  align-items: center;
+}
+
+footer.site nav {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+}
+
+footer.site a {
+  color: var(--muted);
+}
+
+footer.site a:hover {
+  color: var(--accent);
+}
+
+/* ---------------- parent bar ---------------- */
+/* Lien ket nguoc ve trang chu cua hang, vi portal nay khong phai trang chu. */
+
+.parent-bar {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.parent-bar .wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.parent-bar a {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.parent-bar a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.parent-bar .sep {
+  color: var(--border-2);
+}
+
+@media (max-width: 640px) {
+  nav.site {
+    gap: 15px;
+    font-size: 13px;
+  }
+
+  .hero {
+    padding: 56px 0 40px;
+  }
+
+  footer.site nav {
+    margin-left: 0;
+  }
+}
