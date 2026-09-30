@@ -45,15 +45,18 @@ function makeD1() {
           },
           run: async () => {
             if (/INSERT INTO apps/.test(sql)) {
+              // Thu tu cot trong worker: client_id, owner, name, region,
+              // site, scope, key_hash, created_at
               const row = {
                 client_id: String(args[0]),
                 owner_user_id: Number(args[1]),
                 name: String(args[2]),
                 region: String(args[3]),
-                scope: String(args[4]),
-                key_hash: String(args[5]),
+                site: String(args[4]),
+                scope: String(args[5]),
+                key_hash: String(args[6]),
                 status: 'active',
-                created_at: String(args[6]),
+                created_at: String(args[7]),
                 last_used_at: null,
                 request_count: 0,
               }
@@ -73,10 +76,27 @@ function makeD1() {
           },
           all: async () => {
             if (/FROM apps/.test(sql)) {
-              const list = [...apps.values()]
-                .filter((r) => Number(r.owner_user_id) === Number(args[0]))
-                .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
-              return { results: list }
+              // Dung lai chinh danh sach tham so de len `WHERE` co the
+              // chen them dieu kien loc theo region/site.
+              const params = args as unknown[]
+              let list = [...apps.values()].filter(
+                (r) => Number(r.owner_user_id) === Number(params[0])
+              )
+              const regions = [...sql.matchAll(/AND region = \?/g)].map((m) => m[0])
+              const sites = [...sql.matchAll(/AND site = \?/g)].map((m) => m[0])
+              if (regions.length) {
+                const v = String(params[1])
+                list = list.filter((r) => r.region === v)
+              }
+              if (sites.length) {
+                const v = String(params[1 + regions.length])
+                list = list.filter((r) => r.site === v)
+              }
+              return {
+                results: list.sort((a, b) =>
+                  String(b.created_at).localeCompare(String(a.created_at))
+                ),
+              }
             }
             return { results: [] }
           },
@@ -176,7 +196,7 @@ test('POST /v1/apps tra clientId va clientKey', async () => {
     req('/v1/apps', {
       method: 'POST',
       token: 'token-alice',
-      body: JSON.stringify({ name: 'App cua Alice', region: 'ANIVIET', scope: 'read' }),
+      body: JSON.stringify({ name: 'App cua Alice', site: 'ANIVIET', scope: 'read' }),
     }),
     env(db)
   )
@@ -185,9 +205,54 @@ test('POST /v1/apps tra clientId va clientKey', async () => {
   const app = await j(res)
   assert.match(app.clientId, /^agc_/)
   assert.match(app.clientKey, /^agk_/)
-  assert.equal(app.region, 'ANIVIET')
+  assert.equal(app.site, 'ANIVIET')
+  // Worker tu suy ra region tu bang tra cuu, khong tin client gui len.
+  assert.equal(app.region, 'ASIA')
   assert.equal(app.status, 'active')
   assert.equal(app.requestCount, 0)
+})
+
+test('tu choi khi client gui region khong khop voi site', async () => {
+  // ANIVIET thuoc ASIA. Client gui region = EUROPE la sai — worker phai
+  // tu choi chu khong tao ra app ma khong khop voi bang tra cuu.
+  const res = await worker.fetch(
+    req('/v1/apps', {
+      method: 'POST',
+      token: 'token-alice',
+      body: JSON.stringify({
+        name: 'App sai vung',
+        site: 'ANIVIET',
+        region: 'EUROPE',
+      }),
+    }),
+    env(makeD1())
+  )
+  assert.equal(res.status, 400)
+  assert.equal((await j(res)).error.code, 'REGION_SITE_MISMATCH')
+})
+
+test('loc danh sach app theo vung va site', async () => {
+  const db = makeD1()
+  await worker.fetch(
+    req('/v1/apps', {
+      method: 'POST',
+      token: 'token-alice',
+      body: JSON.stringify({ name: 'App trong ASIA', site: 'ANIVIET' }),
+    }),
+    env(db)
+  )
+
+  const res = await worker.fetch(
+    req('/v1/apps?region=ASIA&site=ANIVIET', { token: 'token-alice' }),
+    env(db)
+  )
+  const { apps } = await j(res)
+  assert.equal(apps.length, 1)
+  assert.equal(apps[0].name, 'App trong ASIA')
+  // Moi them `site` vao hang tra ra, frontend can no de biet app thuoc
+  // trang site nao.
+  assert.equal(apps[0].site, 'ANIVIET')
+  assert.equal(apps[0].region, 'ASIA')
 })
 
 test('clientKey khong bao gio duoc luu ban ro', async () => {
@@ -196,7 +261,7 @@ test('clientKey khong bao gio duoc luu ban ro', async () => {
     req('/v1/apps', {
       method: 'POST',
       token: 'token-alice',
-      body: JSON.stringify({ name: 'App', region: 'ANIVIET' }),
+      body: JSON.stringify({ name: 'App', site: 'ANIVIET' }),
     }),
     env(db)
   )
@@ -212,7 +277,7 @@ test('clientKey khong bao gio duoc luu ban ro', async () => {
 test('GET /v1/apps chi tra app cua chinh minh', async () => {
   const db = makeD1()
   const body = (name: string) =>
-    JSON.stringify({ name, region: 'ANIVIET', scope: 'read' })
+    JSON.stringify({ name, site: 'ANIVIET', scope: 'read' })
 
   await worker.fetch(
     req('/v1/apps', { method: 'POST', token: 'token-alice', body: body('App cua Alice') }),
@@ -236,6 +301,7 @@ test('GET /v1/apps chi tra app cua chinh minh', async () => {
     'region',
     'requestCount',
     'scope',
+    'site',
     'status',
   ])
 })
@@ -247,7 +313,7 @@ test('khong thu hoi duoc app cua nguoi khac', async () => {
       req('/v1/apps', {
         method: 'POST',
         token: 'token-alice',
-        body: JSON.stringify({ name: 'App cua Alice', region: 'ANIVIET' }),
+        body: JSON.stringify({ name: 'App cua Alice', site: 'ANIVIET' }),
       }),
       env(db)
     )
@@ -272,7 +338,7 @@ test('chu thanh cong app cua chinh minh', async () => {
       req('/v1/apps', {
         method: 'POST',
         token: 'token-alice',
-        body: JSON.stringify({ name: 'App', region: 'ANIVIET' }),
+        body: JSON.stringify({ name: 'App', site: 'ANIVIET' }),
       }),
       env(db)
     )
@@ -292,7 +358,7 @@ test('tu choi site khong ton tai', async () => {
     req('/v1/apps', {
       method: 'POST',
       token: 'token-alice',
-      body: JSON.stringify({ name: 'App', region: 'KHONG_CO' }),
+      body: JSON.stringify({ name: 'App', site: 'KHONG_CO' }),
     }),
     env(makeD1())
   )
@@ -305,7 +371,7 @@ test('tu choi scope khong hop le', async () => {
     req('/v1/apps', {
       method: 'POST',
       token: 'token-alice',
-      body: JSON.stringify({ name: 'App', region: 'ANIVIET', scope: 'admin' }),
+      body: JSON.stringify({ name: 'App', site: 'ANIVIET', scope: 'admin' }),
     }),
     env(makeD1())
   )
@@ -318,7 +384,7 @@ test('tu choi ten qua ngan', async () => {
     req('/v1/apps', {
       method: 'POST',
       token: 'token-alice',
-      body: JSON.stringify({ name: 'a', region: 'ANIVIET' }),
+      body: JSON.stringify({ name: 'a', site: 'ANIVIET' }),
     }),
     env(makeD1())
   )
@@ -335,7 +401,7 @@ test('chặn tao app qua nhieu lan trong mot gio', async () => {
       req('/v1/apps', {
         method: 'POST',
         token: 'token-alice',
-        body: JSON.stringify({ name: 'App ' + i, region: 'ANIVIET' }),
+        body: JSON.stringify({ name: 'App ' + i, site: 'ANIVIET' }),
       }),
       env(db)
     )

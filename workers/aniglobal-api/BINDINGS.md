@@ -16,21 +16,29 @@ mot site vao ASIA la doi du lieu, khong phai them dich vu.
 
 ---
 
-## Buoc 1 — Tao D1
+## Buoc 1 — D1 dung chung
 
 `Cloudflare Dashboard > Workers & Pages > D1 SQL Database > Create database`
 
-Ten: `aniglobal-apps`
+Ten: `aniglobal-globalDB`
+
+Mot database dung chung cho ca `aniglobal-api` va cac worker region
+(`asia-api`). Worker nao cung bind `DB` cung mot database; chi bang
+`apps` cua ANIGLOBAL API moi thuoc ve database nay.
 
 ## Buoc 2 — Tao bang
 
-`Dashboard > D1 > aniglobal-apps > Console`, dan `schema.sql` vao va chay.
+`Dashboard > D1 > aniglobal-globalDB > Console`, dan `schema.sql` vao va chay.
 
-Hoac dong `schema.sql` vao thu muc nay vao CLI:
+Hoac:
 
 ```bash
-npx wrangler d1 execute aniglobal-apps --file=schema.sql
+npx wrangler d1 execute aniglobal-globalDB --file=schema.sql
 ```
+
+> Neu ban da chay phien ban cu cua `schema.sql`, cot `region` luc do luu
+> **ten site** chu khong phai vung dia ly. Phan `MIGRATION` cuoi file
+> schema giai thich cach chuyen doi lai.
 
 ## Buoc 3 — Tao worker
 
@@ -59,7 +67,7 @@ truong ma khong sua code.
 
 | Binding | Database |
 |---|---|
-| `DB` | `aniglobal-apps` |
+| `DB` | `aniglobal-globalDB` |
 
 T ten `DB` rat quan trong. Code goi `env.DB`.
 
@@ -94,9 +102,18 @@ Khong can xac thuc. Cho frontend va nguoi dung biet region nao co du lieu.
 ### `GET /v1/apps`
 `Authorization: Bearer <token ANIVIET>`
 
+Co the loc them bang query string. `region` la vung dia ly, `site` la site
+quoc gia trong vung do — hai thu khac nhau:
+
+```
+GET /v1/apps?region=ASIA&site=ANIVIET
+```
+
 ```json
-{ "apps": [ { "clientId": "agc_…", "name": "…", "region": "ANIVIET", "scope": "read",
-              "status": "active", "createdAt": "…", "lastUsedAt": null, "requestCount": 0 } ] }
+{ "apps": [ { "clientId": "agc_…", "name": "…",
+              "region": "ASIA", "site": "ANIVIET",
+              "scope": "read", "status": "active",
+              "createdAt": "…", "lastUsedAt": null, "requestCount": 0 } ] }
 ```
 
 Chi tra app cua chinh tai khoan dang goi.
@@ -105,8 +122,12 @@ Chi tra app cua chinh tai khoan dang goi.
 `Authorization: Bearer <token ANIVIET>`
 
 ```json
-{ "name": "My tracker", "region": "ANIVIET", "scope": "read" }
+{ "name": "My tracker", "site": "ANIVIET", "region": "ASIA", "scope": "read" }
 ```
+
+`region` la tuy chon. Neu gui sai vung, worker tra `REGION_SITE_MISMATCH` —
+do worker la noi duy nac biet site nao thuoc vung nao, va app tao ra phai
+khop voi bang tra cuu.
 
 Tra `201` kem `clientId` va `clientKey`. **`clientKey` chi xuat hien mot lan.**
 Khong co duong nao doc lai duoc — xem lai thi thu hoi roi tao app moi.
@@ -138,6 +159,7 @@ Khong phuc vu o day. Worker nay tra `404 NOT_FOUND` kem loi nao la. Hay goi
 | `INVALID_BODY` | Body khong phai JSON |
 | `INVALID_NAME` | Ten app ngoai 2–64 ky tu |
 | `PLATFORM_NOT_AVAILABLE` | Site khong ton tai |
+| `REGION_SITE_MISMATCH` | `region` gui len khong dung region cua site do |
 | `INSUFFICIENT_SCOPE` | Scope khong hop le |
 | `RATE_LIMITED` | Tao qua nhieu app trong gio |
 | `APP_LIMIT_REACHED` | Da dat gioi han so app |
@@ -155,6 +177,11 @@ doi contract, khong phai doi thong bao.
 **`SITES` phai khop voi `src/data/regions.ts` cua trang web.** Neu trang web
 hien ra mot site ma worker nay khong biet, nguoi dung tao app xong moi bi
 chiem. Khi them site moi, sua ca hai noi.
+
+**`region` va `site` la hai cot rieng.** `region` la vung dia ly (ASIA), `site`
+la site quoc gia trong vung do (ANIVIET). ASIA co nhieu site quoc gia, nen
+gop chung se khong phan biet duoc app nao thuoc vung nao. Worker tu suy ra
+`region` tu bang `SITES` chu khong tin client gui len.
 
 **Khong luu client key ban ro.** Chi luu `key_hash` (SHA-256). Muon xem lai
 thi thu hoi roi tao app moi — chu de hien thi key la mot dac tinh, khong phai

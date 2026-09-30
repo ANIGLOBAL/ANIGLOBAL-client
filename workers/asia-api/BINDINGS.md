@@ -14,7 +14,11 @@
 
 | Binding | Loai | Tai nguyen |
 |---|---|---|
-| `DB` | D1 Database | `aniglobal-asia` — id `4b84f285-03fc-4af2-a937-f035fff24a38` |
+| `DB` | D1 Database | `aniglobal-globalDB` — cung database voi worker `aniglobal-api` |
+
+> Database dung chung cho toan he. `aniglobal-api` giu bang `apps`,
+> `asia-api` giu bang `id_map`. Hai bang khac nhau nen khong anh huong
+> nhau, va khong can tach D1 rieng cho tung worker.
 
 ## Bang duoc worker tu tao
 

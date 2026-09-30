@@ -123,10 +123,15 @@ function clientIp(request) {
 // ============================================================
 
 /**
- * Site nao duoc phep tao app.
+ * Site nao duoc phep tao app, va no thuoc region nao.
  *
  * Phai khop voi `src/data/regions.ts` cua trang web. Neu trang web hien
  * mot site ma worker nay tu choi, nguoi dung tao app xong moi bi chiem.
+ *
+ * `region` o day la **vung dia ly** (ASIA), con `site` la **site quoc
+ * gia** trong vung do (ANIVIET). Hai thu khac nhau: ASIA co nhieu
+ * site quoc gia, va nhieu region khac nhau cung co the co site trung
+ * ten — nen khong duoc gop chung mot cot.
  */
 const SITES = {
   ANIVIET: { region: 'ASIA', locale: 'vi-VN', name: 'ANIVIET' },
@@ -242,7 +247,10 @@ function toPublic(row) {
   return {
     clientId: row.client_id,
     name: row.name,
+    // `region` la vung dia ly, `site` la site quoc gia. Frontend hien
+    // ca hai nen mot app luon biet no thuoc vung nao.
     region: row.region,
+    site: row.site,
     scope: row.scope,
     status: row.status,
     createdAt: row.created_at,
@@ -264,15 +272,27 @@ async function handleCreateApp(request, env, db, user) {
   }
 
   const name = String(body.name || '').trim();
-  const region = String(body.region || '').trim().toUpperCase();
+  const site = String(body.site || body.region || '').trim().toUpperCase();
   const scope = String(body.scope || 'read').trim();
 
   if (name.length < 2 || name.length > 64) {
     return fail(400, 'INVALID_NAME', 'Ten app phai tu 2 den 64 ky tu.');
   }
-  if (!SITES[region]) {
-    return fail(400, 'PLATFORM_NOT_AVAILABLE', `Site "${region}" khong ton tai.`);
+
+  const entry = SITES[site];
+  if (!entry) {
+    return fail(400, 'PLATFORM_NOT_AVAILABLE', `Site "${site}" khong ton tai.`);
   }
+
+  // Client cung co the gui `region` len. Neu gui sai thi dung ban tra ve,
+  // do worker la noi duy nac biet site thuoc region nao — dung thong tin
+  // tu client se tao ra app ma khong khop voi bang tra cuu.
+  const claimed = String(body.region || '').trim().toUpperCase();
+  if (claimed && claimed !== entry.region) {
+    return fail(400, 'REGION_SITE_MISMATCH', `Site ${site} thuoc vung ${entry.region}, khong phai ${claimed}.`);
+  }
+  const region = entry.region;
+
   if (!SCOPES.has(scope)) {
     return fail(400, 'INSUFFICIENT_SCOPE', `Scope "${scope}" khong hop le.`);
   }
@@ -312,10 +332,10 @@ async function handleCreateApp(request, env, db, user) {
   await db
     .prepare(
       `INSERT INTO apps
-         (client_id, owner_user_id, name, region, scope, key_hash, status, created_at, request_count)
-       VALUES (?, ?, ?, ?, ?, ?, 'active', ?, 0)`
+         (client_id, owner_user_id, name, region, site, scope, key_hash, status, created_at, request_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, 0)`
     )
-    .bind(clientId, user.id, name, region, scope, keyHash, nowIso())
+    .bind(clientId, user.id, name, region, site, scope, keyHash, nowIso())
     .run();
 
   // `clientKey` xuat hien MOT LAN o day. Worker khong luu ban ro nen
@@ -326,6 +346,7 @@ async function handleCreateApp(request, env, db, user) {
       clientKey,
       name,
       region,
+      site,
       scope,
       status: 'active',
       createdAt: nowIso(),
@@ -336,18 +357,29 @@ async function handleCreateApp(request, env, db, user) {
   );
 }
 
-async function handleListApps(db, user) {
-  const res = await db
-    .prepare(
-      `SELECT client_id, name, region, scope, status, created_at, last_used_at, request_count
-         FROM apps
-        WHERE owner_user_id = ?
-        ORDER BY created_at DESC
-        LIMIT 200`
-    )
-    .bind(user.id)
-    .all();
+async function handleListApps(db, user, url) {
+  // Loc theo vung/site neu client hoi. Truy van tren trang site luon
+  // kem ca hai, nen chi thay app cua trang do moi thay.
+  const region = (url.searchParams.get('region') || '').trim().toUpperCase();
+  const site = (url.searchParams.get('site') || '').trim().toUpperCase();
 
+  let sql =
+    `SELECT client_id, name, region, site, scope, status, created_at, last_used_at, request_count
+       FROM apps
+      WHERE owner_user_id = ?`;
+  const params = [user.id];
+
+  if (region) {
+    sql += ' AND region = ?';
+    params.push(region);
+  }
+  if (site) {
+    sql += ' AND site = ?';
+    params.push(site);
+  }
+  sql += ' ORDER BY created_at DESC LIMIT 200';
+
+  const res = await db.prepare(sql).bind(...params).all();
   return json({ apps: (res.results || []).map(toPublic) });
 }
 
@@ -419,7 +451,7 @@ export default {
     // /v1/apps
     // ---------------------------------------------------------
     if (url.pathname === '/v1/apps') {
-      if (request.method === 'GET') return handleListApps(env.DB, user);
+      if (request.method === 'GET') return handleListApps(env.DB, user, url);
       if (request.method === 'POST') return handleCreateApp(request, env, env.DB, user);
       return fail(405, 'METHOD_NOT_ALLOWED', 'Chi ho tro GET va POST.');
     }
