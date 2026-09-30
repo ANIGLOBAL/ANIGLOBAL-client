@@ -1,24 +1,39 @@
 // ============================================================
-// ANIGLOBAL — aniglobal-api
-// Worker chinh cua API cong khai. Quan ly vong doi app client.
+// ANIGLOBAL — aniglobal-appm
+// ============================================================
+// Worker QUAN LY APP CLIENT.
 //
 // Day la FILE DEPLOY. Khong can build, khong can bundler:
-//   Cloudflare Dashboard > Worker "aniglobal-api" > Edit code > Paste > Deploy
-//   Cloudflare Dashboard > Worker > Settings > Variables > them AUTH_API
-//   Cloudflare Dashboard > D1 > SQL > chay schema.sql > bind DB
+//   Cloudflare Dashboard > Worker "aniglobal-appm" > Edit code > Paste > Deploy
+//   Settings > Bindings > DB -> aniglobal-globaldb
+//   Settings > Variables > AUTH_API (tuy chon)
 //
-// Phan chia trach nhiem:
-//   Worker nay      : xac thuc tai khoan, tao app, cap key, thu hoi key
-//   Worker asia-api : chay truy van AGQL, tra du lieu cua region
-// Mot khu vuc co DUNG MOT worker du lieu, khong phai moi quoc gia mot worker.
+// ---------------------------------------
+// VAI TRO TRONG HE
+// ---------------------------------------
+// `aniglobal-appm` la CONG TRUNG GIAN. No goc phan phoi de cac worker
+// khac goi den khi can chung moc chung:
 //
-// HAN DONG DAN PHAI THEO:
-//   1. Tao app -> clientKey tra ve DUNG MOT LAN, khong luu ban ro.
-//      Muon xem lai thi phai thu hoi roi tao app moi.
-//   2. App client KHONG phai tai khoan. Khong duoc dung clientKey de
-//      tao app khac hay xem app cua nguoi khac.
+//   - QUAN LY APP CLIENT: sinh client ID + client key, thu hoi key
+//   - CONG TRUNG GIAN: cac worker khac goi den day de lay moc chung
 //
-// D1 binding: DB
+// Cac worker khu vuc (`asia-api`, `eng-api`, ...) se lam trung gian
+// theo cung khuon: no la noi de worker nen la goi den, de moi thu
+// co mot dia chi de quan tri, thay vi nhieu worker goi nhau truc tiep
+// lan nhau.
+//
+// Hien tai ANIVIET van dung cac worker roi rac cua no. Do la thu
+// dang chuyen dan, khong phai thiet ke cuoi cung.
+//
+// ---------------------------------------
+// HAN DONG DAN PHAI THEO
+// ---------------------------------------
+// 1. Client key tra ve DUNG MOT LAN, khong luu ban ro. Xem lai thi
+//    thu hoi roi tao app moi.
+// 2. App client KHONG phai tai khoan. Khong duoc dung clientKey de
+//    tao app khac hay xem app cua nguoi khac.
+// 3. Khong tin gi browser gui. Token tai khoan phai do worker ANIVIET
+//    xac nhan truoc.
 // ============================================================
 
 // ============================================================
@@ -26,21 +41,17 @@
 // ============================================================
 
 /**
- * Worker xac thuc tai khoan cua ANIVIET.
- *
- * Mac dinh giong ANIVIET. Worker co the gan bien `AUTH_API` de tro sang
- * moi truong ma khong can sua code.
+ * Worker xac thuc tai khoan cua ANIVIET. Mac dinh giong ANIVIET; gan
+ * bien `AUTH_API` de tro sang moi truong ma khong sua code.
  */
 const AUTH_API = 'https://sginup-loginsystem.aniviet.workers.dev';
 
 /**
- * Bao lau ket qua xac thuc trong bao lau giay.
+ * Bao lau ket qua xac thuc, giay.
  *
- * Worker goi `/api/auth/me` o ANIVIET de xac thuc token. Neu moi request
- * deu goi thi ton mot vong mang. Cache lai mot khoang ngan giup giup nhip.
- *
- * HUU HAI: dang xuat o ANIVIET se co hieu luc toi da lau nhat la so giay
- * nay. Do la do doi doi chieu, dat 0 neu can hieu luc ngay lap tuc.
+ * HUU HAI: dang xuat o ANIVIET co hieu luc toi da lau nhat so giay nay.
+ * Do la do doi doi chieu. Dat `AUTH_TTL_SECONDS = 0` neu can hieu luc
+ * ngay lap tuc.
  */
 const AUTH_TTL_SECONDS = 60;
 
@@ -53,8 +64,7 @@ const MAX_APPS_PER_USER = 50;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers':
-    'Content-Type,Authorization,X-ANIGLOBAL-Client-ID',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-ANIGLOBAL-Client-ID',
   'Access-Control-Max-Age': '600',
 };
 
@@ -66,11 +76,8 @@ function json(data, status) {
 }
 
 /**
- * Loi tra ve dang `{ error: { code, message } }`.
- *
- * Frontend doc theo dung hinh dang nay, va ma loi duoc ghi trong tai lieu
- * nen phai dung ma co dinh — doi ma la doi contract, khong phai chi doi
- * thong bao.
+ * Loi dang `{ error: { code, message } }`. Ma ghi trong tai lieu nen
+ * phai dung ma co dinh.
  */
 function fail(status, code, message) {
   return json({ error: { code, message } }, status);
@@ -114,10 +121,6 @@ function randomId(length) {
 const newClientId = () => 'agc_' + randomId(24);
 const newClientKey = () => 'agk_' + randomId(40);
 
-function clientIp(request) {
-  return request.headers.get('CF-Connecting-IP') || '0.0.0.0';
-}
-
 // ============================================================
 // DANH SACH SITE — phai khop voi frontend
 // ============================================================
@@ -128,10 +131,8 @@ function clientIp(request) {
  * Phai khop voi `src/data/regions.ts` cua trang web. Neu trang web hien
  * mot site ma worker nay tu choi, nguoi dung tao app xong moi bi chiem.
  *
- * `region` o day la **vung dia ly** (ASIA), con `site` la **site quoc
- * gia** trong vung do (ANIVIET). Hai thu khac nhau: ASIA co nhieu
- * site quoc gia, va nhieu region khac nhau cung co the co site trung
- * ten — nen khong duoc gop chung mot cot.
+ * `region` la vung dia ly (ASIA), `site` la site quoc gia trong vung do
+ * (ANIVIET). Hai thu khac nhau: mot vung co nhieu site quoc gia.
  */
 const SITES = {
   ANIVIET: { region: 'ASIA', locale: 'vi-VN', name: 'ANIVIET' },
@@ -161,7 +162,6 @@ async function requireUser(request, env) {
 
   const authApi = (env && env.AUTH_API ? env.AUTH_API : AUTH_API).replace(/\/+$/, '');
 
-  // Dung cache truoc khi goi mang.
   if (authApi === AUTH_API && AUTH_TTL_SECONDS > 0) {
     const hit = authCache.get(token);
     if (hit && hit.until > Date.now()) return { user: hit.user };
@@ -177,9 +177,11 @@ async function requireUser(request, env) {
       if (body && body.user && body.user.id) user = body.user;
     }
   } catch {
-    // Worker ANIVIET khong goi duoc. Xem nhu token khong hop le thay vi
+    // Worker ANIVIET khong goi duoc. Xem nhu khong xac thuc duoc thay vi
     // bo qua — bo qua nghia la mo cong khi ha tang auth chua.
-    return { error: fail(503, 'AUTH_UNAVAILABLE', 'Khong xac thuc duoc tai khoan. Thu lai sau.') };
+    return {
+      error: fail(503, 'AUTH_UNAVAILABLE', 'Khong xac thuc duoc tai khoan. Thu lai sau.'),
+    };
   }
 
   if (!user) {
@@ -205,7 +207,10 @@ function allowCreate(userId) {
 
   if (hits.length >= CREATE_LIMIT.max) {
     createLog.set(userId, hits);
-    return { ok: false, retryAfter: Math.ceil((CREATE_LIMIT.windowMs - (now - hits[0])) / 1000) };
+    return {
+      ok: false,
+      retryAfter: Math.ceil((CREATE_LIMIT.windowMs - (now - hits[0])) / 1000),
+    };
   }
 
   hits.push(now);
@@ -242,13 +247,12 @@ export function __resetForTest() {
 // CHUYEN DOI HANG
 // ============================================================
 
-/** Hang trong D1 -> hang frontend nhan. */
 function toPublic(row) {
   return {
     clientId: row.client_id,
     name: row.name,
-    // `region` la vung dia ly, `site` la site quoc gia. Frontend hien
-    // ca hai nen mot app luon biet no thuoc vung nao.
+    // `region` la vung dia ly, `site` la site quoc gia. Frontend hien ca
+    // hai nen mot app luon biet no thuoc vung nao.
     region: row.region,
     site: row.site,
     scope: row.scope,
@@ -263,7 +267,7 @@ function toPublic(row) {
 // ROUTE
 // ============================================================
 
-async function handleCreateApp(request, env, db, user) {
+async function handleCreateApp(request, db, user) {
   let body;
   try {
     body = await request.json();
@@ -289,7 +293,11 @@ async function handleCreateApp(request, env, db, user) {
   // tu client se tao ra app ma khong khop voi bang tra cuu.
   const claimed = String(body.region || '').trim().toUpperCase();
   if (claimed && claimed !== entry.region) {
-    return fail(400, 'REGION_SITE_MISMATCH', `Site ${site} thuoc vung ${entry.region}, khong phai ${claimed}.`);
+    return fail(
+      400,
+      'REGION_SITE_MISMATCH',
+      `Site ${site} thuoc vung ${entry.region}, khong phai ${claimed}.`
+    );
   }
   const region = entry.region;
 
@@ -301,10 +309,7 @@ async function handleCreateApp(request, env, db, user) {
   if (!limit.ok) {
     return new Response(
       JSON.stringify({
-        error: {
-          code: 'RATE_LIMITED',
-          message: 'Tao qua nhieu app trong mot gio. Thu lai sau.',
-        },
+        error: { code: 'RATE_LIMITED', message: 'Tao qua nhieu app trong mot gio. Thu lai sau.' },
       }),
       {
         status: 429,
@@ -338,8 +343,8 @@ async function handleCreateApp(request, env, db, user) {
     .bind(clientId, user.id, name, region, site, scope, keyHash, nowIso())
     .run();
 
-  // `clientKey` xuat hien MOT LAN o day. Worker khong luu ban ro nen
-  // tu gio khong co duong nao tra lai duoc. Xem lai phai tao app moi.
+  // `clientKey` xuat hien MOT LAN o day. Worker khong luu ban ro nen tu
+  // gio khong co duong nao tra lai duoc. Xem lai phai tao app moi.
   return json(
     {
       clientId,
@@ -385,12 +390,9 @@ async function handleListApps(db, user, url) {
 
 async function handleRevokeApp(db, user, clientId) {
   // WHERE owner_user_id luon di kem WHERE client_id. Khong co dieu kien
-  // chu so san, nguoi khac khong the thu hoi app cua nguoi nay.
+  // chu so san, nguoi khac khong the thu hoi app cua ngui nay.
   const res = await db
-    .prepare(
-      `UPDATE apps SET status = 'revoked'
-        WHERE client_id = ? AND owner_user_id = ?`
-    )
+    .prepare(`UPDATE apps SET status = 'revoked' WHERE client_id = ? AND owner_user_id = ?`)
     .bind(clientId, user.id)
     .run();
 
@@ -423,14 +425,12 @@ export default {
       }
       return json({
         ok: true,
-        regions: [
-          { region: 'ASIA', available: true },
-          { region: 'EUROPE', available: false },
-          { region: 'NORTH_AMERICA', available: false },
-          { region: 'SOUTH_AMERICA', available: false },
-          { region: 'OCEANIA', available: false },
-          { region: 'AFRICA', available: false },
-        ],
+        service: 'aniglobal-appm',
+        sites: Object.keys(SITES).map((id) => ({
+          site: id,
+          region: SITES[id].region,
+          locale: SITES[id].locale,
+        })),
         database: dbOk,
       });
     }
@@ -442,17 +442,9 @@ export default {
 
     pruneCaches();
 
-    // `/v1/agql` do worker `asia-api` phuc vu, khong phai worker nay.
-    if (url.pathname === '/v1/agql') {
-      return fail(404, 'NOT_FOUND', 'Hay goi /v1/agql tren worker cua region.');
-    }
-
-    // ---------------------------------------------------------
-    // /v1/apps
-    // ---------------------------------------------------------
     if (url.pathname === '/v1/apps') {
       if (request.method === 'GET') return handleListApps(env.DB, user, url);
-      if (request.method === 'POST') return handleCreateApp(request, env, env.DB, user);
+      if (request.method === 'POST') return handleCreateApp(request, env.DB, user);
       return fail(405, 'METHOD_NOT_ALLOWED', 'Chi ho tro GET va POST.');
     }
 

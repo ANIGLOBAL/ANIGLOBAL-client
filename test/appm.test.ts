@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import worker, { __resetForTest } from '../workers/aniglobal-api/aniglobal-api.js'
+import worker, { __resetForTest } from '../workers/aniglobal-appm/appm.js'
 
 const REAL_FETCH = globalThis.fetch
 const AUTH_BASE = 'https://sginup-loginsystem.aniviet.workers.dev'
@@ -169,8 +169,11 @@ test('GET /v1/health khong can dang nhap va bao cao D1', async () => {
 
   const body = await j(res)
   assert.equal(body.ok, true)
+  assert.equal(body.service, 'aniglobal-appm')
   assert.equal(body.database, true)
-  assert.ok(body.regions.some((r: { region: string }) => r.region === 'ASIA'))
+  // Health bao cao site nao duoc phep tao app, kem region cua no.
+  assert.ok(body.sites.some((s: { site: string }) => s.site === 'ANIVIET'))
+  assert.equal(body.sites[0].region, 'ASIA')
 })
 
 test('OPTIONS tra 204 cho preflight', async () => {
@@ -413,15 +416,6 @@ test('chặn tao app qua nhieu lan trong mot gio', async () => {
   }
 
   assert.equal(limited, 5) // 25 - 20 cho phep
-})
-
-test('/v1/agql nam o worker region, khong phai worker nay', async () => {
-  const res = await worker.fetch(
-    req('/v1/agql', { method: 'POST', token: 'token-alice', body: '{}' }),
-    env(makeD1())
-  )
-  assert.equal(res.status, 404)
-  assert.equal((await j(res)).error.code, 'NOT_FOUND')
 })
 
 test('duong dan la bi tra 404 sau khi da xac thuc', async () => {

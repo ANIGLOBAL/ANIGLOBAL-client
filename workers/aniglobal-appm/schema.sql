@@ -1,10 +1,10 @@
 -- ============================================================
 -- ANIGLOBAL — bang app client
 -- ============================================================
--- Database dung chung: aniglobal-globalDB
---   Cloudflare Dashboard > D1 > aniglobal-globalDB > Console
+-- Database dung chung: aniglobal-globaldb
+--   Cloudflare Dashboard > D1 > aniglobal-globaldb > Console
 -- Hoac:
---   npx wrangler d1 execute aniglobal-globalDB --file=schema.sql
+--   npx wrangler d1 execute aniglobal-globaldb --file=schema.sql
 --
 -- `client_id` la khoa chinh TEXT. D1 khong co AUTOINCREMENT tren
 -- TEXT, nen ID sinh o worker bang crypto.getRandomValues.
