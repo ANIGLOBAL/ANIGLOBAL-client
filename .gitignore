@@ -1,0 +1,4 @@
+
+# Vite/rolldown co the tao thu muc .git rong khi outDir nam ngoai thu
+# muc project. No khong can va gay nhau khi nguoi dung thu push.
+.git/

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ANIGLOBAL</title>
+    <link rel="canonical" href="/ANIGLOBAL-client/" />
+    <script>
+      // Luu duong dan nguoi dang muon mo roi ve app shell. App doc lai
+      // gia tri nay trong main.tsx truoc khi React Router khoi tao.
+      sessionStorage.setItem('aniglobal:redirect', location.pathname + location.search)
+      location.replace('/ANIGLOBAL-client/')
+    </script>
+  </head>
+  <body></body>
+</html>
