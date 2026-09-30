@@ -1,4 +1,4 @@
-
-# Vite/rolldown co the tao thu muc .git rong khi outDir nam ngoai thu
-# muc project. No khong can va gay nhau khi nguoi dung thu push.
+# Vite xoa sach thu muc nay truoc moi lan build (emptyOutDir), nen file
+# nay bi xoa theo. Nhung rolldown co the tao .git rong o day, nen can
+# chan lai.
 .git/
