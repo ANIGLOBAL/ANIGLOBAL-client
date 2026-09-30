@@ -1,4 +1,6 @@
-# Vite xoa sach thu muc nay truoc moi lan build (emptyOutDir), nen file
-# nay bi xoa theo. Nhung rolldown co the tao .git rong o day, nen can
-# chan lai.
+# Vite empties this directory before every build, so this file gets wiped
+# on each run. It has to be recreated afterwards.
+#
+# Nothing here should ever be a git repository. Rolldown will otherwise
+# leave an empty .git here and confuse the next push.
 .git/
