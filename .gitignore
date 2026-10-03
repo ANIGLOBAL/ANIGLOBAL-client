@@ -1,6 +1,2 @@
-# Vite empties this directory before each build, so this file is wiped
-# on every run and has to be recreated.
-#
-# Nothing here should be a git repository. Rolldown otherwise leaves an
-# empty .git behind, which confuses the next push.
+# Vite empties this directory on every build, so this file has to be recreated.
 .git/
